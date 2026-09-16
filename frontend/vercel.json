@@ -4,8 +4,9 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm ci",
+  "_comment_rewrites": "The SPA catch-all deliberately excludes /api and /health. Without the exclusion, an unset VITE_API_BASE_URL makes the client call its own origin, the catch-all answers with index.html, and the app fails with an opaque 'JSON.parse: unexpected character' instead of a clear 404.",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/:path((?!api/|health$).*)", "destination": "/index.html" }
   ],
   "headers": [
     {
