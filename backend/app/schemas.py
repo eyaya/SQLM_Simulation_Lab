@@ -1,6 +1,50 @@
+import os
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
+
+
+def _limit(name: str, default: float) -> float:
+    raw = os.environ.get(f"SQLM_MAX_{name}")
+    if raw is None:
+        return default
+    try:
+        return float(raw)
+    except ValueError:
+        return default
+
+
+# Solver knobs that drive runtime. `base_params` is otherwise free-form
+# passthrough, and N and ms feed straight into an O(N^3) iteration loop, so an
+# unbounded request can pin a worker for hours. Raise the ceilings with
+# SQLM_MAX_N / SQLM_MAX_MS when running locally on real hardware.
+REQUIRED_BASE_PARAMS = ("N", "ms", "L", "tol")
+BASE_PARAM_BOUNDS: dict[str, tuple[float, float]] = {
+    "N": (4, _limit("N", 201)),
+    "ms": (1, _limit("MS", 500)),
+    "L": (1.0, _limit("L", 100.0)),
+    "tol": (1e-16, 1e-2),
+    "omega": (1e-3, 2.0),
+}
+
+
+def validate_base_params(base_params: dict[str, Any]) -> dict[str, Any]:
+    missing = [key for key in REQUIRED_BASE_PARAMS if key not in base_params]
+    if missing:
+        raise ValueError(f"Missing solver parameters: {', '.join(missing)}.")
+
+    for key, (low, high) in BASE_PARAM_BOUNDS.items():
+        if key not in base_params:
+            continue
+        value = base_params[key]
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError(f"Solver parameter '{key}' must be a number.")
+        # Also rejects NaN and infinities, which compare False against both bounds.
+        if not low <= value <= high:
+            raise ValueError(
+                f"Solver parameter '{key}' must be between {low:g} and {high:g}."
+            )
+    return base_params
 
 
 class MaterialProperties(BaseModel):
@@ -46,6 +90,7 @@ class PairStudyRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_request(self) -> "PairStudyRequest":
+        validate_base_params(self.base_params)
         if self.x_param == self.y_param:
             raise ValueError("The X and Y parameters must be different.")
         if len(self.x_spec) < 2 or len(self.y_spec) < 2:
@@ -68,6 +113,7 @@ class ProfileStudyRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_request(self) -> "ProfileStudyRequest":
+        validate_base_params(self.base_params)
         if len(self.param_values) < 1:
             raise ValueError("At least one parameter value is required.")
         if len(self.param_values) > 20:
@@ -91,6 +137,7 @@ class ResidualStudyRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_request(self) -> "ResidualStudyRequest":
+        validate_base_params(self.base_params)
         if not any(item.enabled for item in self.nanofluids):
             raise ValueError("At least one nanofluid must be enabled.")
         return self

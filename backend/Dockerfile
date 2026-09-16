@@ -41,12 +41,15 @@ USER ${UID}:${GID}
 # request pays a several-second one-off penalty.
 RUN python -c "import matplotlib; matplotlib.use('Agg'); import matplotlib.pyplot as plt; plt.figure()"
 
+# PORT is injected by most PaaS hosts (Render among them); 8000 locally.
+ENV PORT=8000
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4).status == 200 else 1)"
+    CMD python -c "import os,urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:%s/health' % os.environ.get('PORT','8000'), timeout=4).status == 200 else 1)"
 
 # Studies are CPU-bound and can run for minutes, so keep the keep-alive
-# window wide and scale with workers rather than threads.
+# window wide and scale with workers rather than threads. One worker is the
+# right default on a 512 MB host: each is a full numpy/scipy/matplotlib process.
 ENV UVICORN_WORKERS=2
-CMD ["sh", "-c", "exec uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --workers \"${UVICORN_WORKERS}\" --timeout-keep-alive 75"]
+CMD ["sh", "-c", "exec uvicorn backend.app.main:app --host 0.0.0.0 --port \"${PORT}\" --workers \"${UVICORN_WORKERS}\" --timeout-keep-alive 75"]

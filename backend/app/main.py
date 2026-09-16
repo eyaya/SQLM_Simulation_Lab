@@ -1,3 +1,4 @@
+import logging
 import os
 
 from fastapi import FastAPI, HTTPException
@@ -30,6 +31,16 @@ DEFAULT_CORS_ORIGINS = [
 ]
 
 
+# uvicorn configures its own loggers but leaves the root logger bare, so
+# without this our records fall through to logging.lastResort and arrive
+# unformatted. basicConfig is a no-op when handlers are already installed.
+logging.basicConfig(
+    level=os.environ.get("SQLM_LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
+logger = logging.getLogger("sqlm.api")
+
+
 def _cors_origins() -> list[str]:
     """Browser origins allowed to call the API cross-origin.
 
@@ -45,6 +56,9 @@ def _cors_origins() -> list[str]:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins(),
+    # Preview deployments get a generated hostname per branch, so they can only
+    # be matched by pattern. Example: https://.*\.vercel\.app
+    allow_origin_regex=os.environ.get("SQLM_CORS_ORIGIN_REGEX") or None,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -66,8 +80,10 @@ def create_pair_study(request: PairStudyRequest) -> PairStudyResponse:
     try:
         return run_pair_study(request)
     except ValueError as exc:
+        logger.warning("Rejected study request: %s", exc)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
+        logger.exception("Pair study failed")
         raise HTTPException(
             status_code=500,
             detail="The simulation request failed unexpectedly.",
@@ -79,8 +95,10 @@ def create_profile_study(request: ProfileStudyRequest) -> ProfileStudyResponse:
     try:
         return run_profile_study(request)
     except ValueError as exc:
+        logger.warning("Rejected study request: %s", exc)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
+        logger.exception("Profile study failed")
         raise HTTPException(
             status_code=500,
             detail="The profile study request failed unexpectedly.",
@@ -92,8 +110,10 @@ def create_residual_study(request: ResidualStudyRequest) -> ResidualStudyRespons
     try:
         return run_residual_study(request)
     except ValueError as exc:
+        logger.warning("Rejected study request: %s", exc)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
+        logger.exception("Residual study failed")
         raise HTTPException(
             status_code=500,
             detail="The residual study request failed unexpectedly.",

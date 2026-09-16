@@ -24,6 +24,13 @@ services:
       # Comma-separated. Only needed for browsers hitting :8000 directly;
       # traffic through the nginx proxy is same-origin.
       SQLM_CORS_ORIGINS: ${SQLM_CORS_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080,http://localhost:5173,http://127.0.0.1:5173}
+      SQLM_CORS_ORIGIN_REGEX: ${SQLM_CORS_ORIGIN_REGEX:-}
+      # Figures are written to the mounted ./ep_results; set false to skip.
+      SQLM_WRITE_FIGURES: ${SQLM_WRITE_FIGURES:-true}
+      SQLM_LOG_LEVEL: ${SQLM_LOG_LEVEL:-INFO}
+      # Ceilings on the solver knobs that drive runtime.
+      SQLM_MAX_N: ${SQLM_MAX_N:-201}
+      SQLM_MAX_MS: ${SQLM_MAX_MS:-500}
       # Small dense systems: one BLAS thread per worker beats oversubscription.
       OMP_NUM_THREADS: ${OMP_NUM_THREADS:-1}
       OPENBLAS_NUM_THREADS: ${OPENBLAS_NUM_THREADS:-1}

@@ -5,6 +5,7 @@ import io
 import math
 import os
 import re
+import threading
 import time
 import unicodedata
 import warnings
@@ -35,9 +36,28 @@ from .solver import SQLMSolver
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
+
+def _env_flag(name: str, default: bool) -> bool:
+    raw = os.environ.get(name)
+    if raw is None or not raw.strip():
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+# PNG export is a side effect of a study, not something the UI consumes. It is
+# worth disabling on hosts with an ephemeral filesystem, where the files are
+# written and then thrown away.
+FIGURE_EXPORT_ENABLED = _env_flag("SQLM_WRITE_FIGURES", True)
+
+# pyplot keeps global figure state, and FastAPI runs these sync endpoints in a
+# threadpool, so two concurrent studies would otherwise interleave their
+# figure/savefig calls. Every pyplot access goes through this lock.
+_PLOT_LOCK = threading.Lock()
+
 # Overridable so the container can point this at a mounted volume.
 OUTPUT_DIR = Path(os.environ.get("SQLM_OUTPUT_DIR") or PROJECT_ROOT / "ep_results")
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+if FIGURE_EXPORT_ENABLED:
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 PAIR_SURFACE_COLORS = {
     "MoS2/EG": "#2563eb",
@@ -560,6 +580,13 @@ def _save_hybrid_table_figure(meta: dict, surfaces: list[dict], fraction_key: st
 
 
 def _save_pair_artifacts(meta: dict, surfaces: list[dict]) -> list[str]:
+    if not FIGURE_EXPORT_ENABLED:
+        return []
+    with _PLOT_LOCK:
+        return _render_pair_artifacts(meta, surfaces)
+
+
+def _render_pair_artifacts(meta: dict, surfaces: list[dict]) -> list[str]:
     saved_files = []
 
     surface_path = _save_pair_surface_figure(meta, surfaces)
@@ -580,6 +607,13 @@ def _save_pair_artifacts(meta: dict, surfaces: list[dict]) -> list[str]:
 
 
 def _save_profile_artifacts(meta: dict, curves: list[dict]) -> list[str]:
+    if not FIGURE_EXPORT_ENABLED:
+        return []
+    with _PLOT_LOCK:
+        return _render_profile_artifacts(meta, curves)
+
+
+def _render_profile_artifacts(meta: dict, curves: list[dict]) -> list[str]:
     eta_values = np.asarray(meta["eta_values"], dtype=float)
     if eta_values.size == 0:
         return []
@@ -766,6 +800,13 @@ def _save_profile_artifacts(meta: dict, curves: list[dict]) -> list[str]:
 
 
 def _save_residual_artifacts(meta: dict, curves: list[dict]) -> list[str]:
+    if not FIGURE_EXPORT_ENABLED:
+        return []
+    with _PLOT_LOCK:
+        return _render_residual_artifacts(meta, curves)
+
+
+def _render_residual_artifacts(meta: dict, curves: list[dict]) -> list[str]:
     iterations = np.asarray(meta["iterations"], dtype=int)
     if iterations.size == 0:
         return []

@@ -1,0 +1,67 @@
+# Render Blueprint for the SQLM API.
+#
+# Deploy: push this repo to GitHub, then in the Render dashboard choose
+# "New +" -> "Blueprint" and point it at the repo. Render reads this file.
+#
+# IMPORTANT - read the sizing note in docs/DEPLOYMENT.md before picking a plan.
+# A study is a blocking CPU-bound computation, so instance CPU maps almost
+# linearly to how long a request takes and therefore to whether it survives
+# the platform's request timeout. The free instance (0.1 CPU) is too slow for
+# anything but the smallest grids.
+
+services:
+  - type: web
+    name: sqlm-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: standard          # 2 GB / 1 CPU. "starter" (512 MB / 0.5 CPU) works
+                            # for small grids; "free" (0.1 CPU) mostly will not.
+    region: oregon
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      # One worker per ~0.5 CPU. Each worker is a separate ~250 MB
+      # numpy/scipy/matplotlib process, so this is bounded by RAM as well.
+      - key: UVICORN_WORKERS
+        value: "2"
+
+      # Render's filesystem is ephemeral: figures written here are discarded on
+      # every restart, redeploy and (on free) spin-down, and nothing serves
+      # them. The UI renders its own plots client-side from the JSON response,
+      # so turning export off costs nothing and saves ~1s per request.
+      - key: SQLM_WRITE_FIGURES
+        value: "false"
+
+      # The solver's matrices are small (3*(N+1) square); threaded BLAS
+      # oversubscribes and measurably slows things down. Measured locally:
+      # 21.7s -> 10.9s for the default study with these set to 1.
+      - key: OMP_NUM_THREADS
+        value: "1"
+      - key: OPENBLAS_NUM_THREADS
+        value: "1"
+      - key: MKL_NUM_THREADS
+        value: "1"
+
+      # The browser calls this API cross-origin from the Vercel frontend, so
+      # the exact production origin must be listed here.
+      # Set this in the dashboard after the Vercel project exists.
+      - key: SQLM_CORS_ORIGINS
+        sync: false
+
+      # Vercel preview deployments get a generated hostname per branch, so they
+      # can only be matched by pattern. Scope it to your own project prefix,
+      # e.g. https://sqlm-simulation-lab-[a-z0-9-]+\.vercel\.app
+      # Leave unset if you do not need previews to reach the API.
+      - key: SQLM_CORS_ORIGIN_REGEX
+        sync: false
+
+      - key: SQLM_LOG_LEVEL
+        value: INFO
+
+      # Ceilings on the solver knobs that drive runtime. Without these an
+      # anonymous caller can pin a worker for hours; this endpoint has no auth.
+      - key: SQLM_MAX_N
+        value: "81"
+      - key: SQLM_MAX_MS
+        value: "200"
