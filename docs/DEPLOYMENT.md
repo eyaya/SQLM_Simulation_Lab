@@ -131,6 +131,11 @@ full deployed configuration is documented in
 `SQLM_CORS_ORIGINS` is a comma-separated exact list — put your production domain
 (and any custom domain) there.
 
+**No trailing slash.** A browser's `Origin` header is `scheme://host[:port]` and
+never carries a path, so `https://sqlm-simulation-lab.vercel.app/` matches
+nothing and every request is refused. This is the single most common way to get
+this step wrong.
+
 `SQLM_CORS_ORIGIN_REGEX` is optional and only needed if you want **preview
 deployments** to work. Every Vercel preview gets a generated hostname per
 branch, so it cannot be listed exactly. Keep the pattern anchored to your own
