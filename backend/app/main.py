@@ -1,8 +1,10 @@
 import logging
 import os
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from .config import get_config_payload
 from .schemas import (
@@ -63,6 +65,25 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(RequestValidationError)
+async def handle_validation_error(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    """Return a readable sentence instead of pydantic's nested report.
+
+    The default 422 body is an array of error objects that also echoes the
+    entire request payload back. The client renders `detail` directly, so it
+    needs a string, and the endpoints already answer bad input with 400.
+    """
+    messages = [
+        str(error.get("msg", "Invalid request.")).removeprefix("Value error, ")
+        for error in exc.errors()
+    ]
+    detail = " ".join(messages) or "Invalid request."
+    logger.warning("Rejected %s: %s", request.url.path, detail)
+    return JSONResponse(status_code=400, content={"detail": detail})
 
 
 @app.get("/health")

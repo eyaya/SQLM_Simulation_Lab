@@ -48,14 +48,19 @@ FRONTEND_PORT=8090 docker compose up   # if 8080 is taken
 
 All variables are optional; defaults are in `.env.example`.
 
-| Variable            | Default | Purpose                                                     |
-| ------------------- | ------- | ----------------------------------------------------------- |
-| `FRONTEND_PORT`     | `8080`  | Host port for the web UI.                                    |
-| `UVICORN_WORKERS`   | `2`     | Concurrent studies. Each worker is a ~250 MB process.        |
-| `UID` / `GID`       | `1000`  | Ownership of files written into `./ep_results`.              |
-| `SQLM_CORS_ORIGINS` | see below | Comma-separated origins allowed to call the API directly.  |
-| `SQLM_OUTPUT_DIR`   | `<project>/ep_results` | Where figures are written.                    |
-| `VITE_API_BASE_URL` | empty   | Build-time API base. Empty means same-origin.                |
+| Variable                 | Default | Purpose                                                  |
+| ------------------------ | ------- | -------------------------------------------------------- |
+| `FRONTEND_PORT`          | `8080`  | Host port for the web UI.                                 |
+| `UVICORN_WORKERS`        | `2`     | Concurrent studies. Each worker is a ~250 MB process.     |
+| `UID` / `GID`            | `1000`  | Ownership of files written into `./ep_results`.           |
+| `SQLM_CORS_ORIGINS`      | see below | Comma-separated origins allowed to call the API directly. |
+| `SQLM_CORS_ORIGIN_REGEX` | empty   | Origin pattern, for hosts with generated hostnames.       |
+| `SQLM_OUTPUT_DIR`        | `<project>/ep_results` | Where figures are written.                 |
+| `SQLM_WRITE_FIGURES`     | `true`  | Export PNGs. Off skips figure rendering entirely.         |
+| `SQLM_LOG_LEVEL`         | `INFO`  | Application log level.                                    |
+| `SQLM_MAX_N`             | `201`   | Ceiling on the `N` solver parameter.                      |
+| `SQLM_MAX_MS`            | `500`   | Ceiling on the `ms` solver parameter.                     |
+| `VITE_API_BASE_URL`      | empty   | Build-time API base. Empty means same-origin.             |
 
 `SQLM_CORS_ORIGINS` only matters when a browser reaches the API directly rather
 than through the nginx proxy; unset, it falls back to the Vite dev-server
@@ -65,12 +70,28 @@ To reach the API directly (for example for the Swagger UI at
 `http://localhost:8000/docs`), uncomment the `ports` block on the `backend`
 service in `docker-compose.yml`.
 
+`SQLM_MAX_N` and `SQLM_MAX_MS` bound the solver knobs that drive request
+runtime. They exist because `base_params` is otherwise free-form passthrough and
+the API has no authentication, so an unbounded `N` would pin a worker
+indefinitely. Raise them for heavy local runs; lower them on a public host.
+
 ### Notes on long-running studies
 
 A study is a blocking, CPU-bound computation: the default 7x7 pair study takes
 roughly 11 seconds, while the maximum 41x41 grid across three nanofluids runs
 for several minutes. The nginx proxy is configured with a 1800s read timeout to
 accommodate this, and `UVICORN_WORKERS` caps how many studies can run at once.
+
+## Deploy to Vercel and Render
+
+The frontend deploys to Vercel as a static site and the API to Render as a
+Docker service, configured by [`frontend/vercel.json`](frontend/vercel.json) and
+[`render.yaml`](render.yaml).
+
+See **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** for the full walkthrough. Read
+its sizing section first: the platform request timeouts and Render's per-plan
+vCPU allocation put a real ceiling on how large a study can be run over the
+public internet.
 
 ## Run locally without Docker
 

@@ -29,7 +29,7 @@ services:
       # Render's filesystem is ephemeral: figures written here are discarded on
       # every restart, redeploy and (on free) spin-down, and nothing serves
       # them. The UI renders its own plots client-side from the JSON response,
-      # so turning export off costs nothing and saves ~1s per request.
+      # so turning export off loses nothing here (and saves ~0.5s per request).
       - key: SQLM_WRITE_FIGURES
         value: "false"
 
