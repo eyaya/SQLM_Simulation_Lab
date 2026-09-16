@@ -82,14 +82,33 @@ Compose, where `./ep_results` is bind-mounted to your machine.
    `package.json`.
 3. Framework preset should auto-detect as Vite. Build settings come from
    `vercel.json`.
-4. Add an environment variable, for **all** environments:
+4. Add an environment variable, ticked for **Production, Preview and
+   Development** — see [`frontend/.env.example`](../frontend/.env.example):
 
    | Name                 | Value                             |
    | -------------------- | --------------------------------- |
    | `VITE_API_BASE_URL`  | `https://sqlm-api.onrender.com`   |
 
-   No trailing slash. This is read at **build time** by Vite and inlined into
-   the bundle, so changing it later requires a redeploy, not just a restart.
+   No trailing slash, no quotes. Vite inlines `VITE_*` at **build time**, so
+   changing it requires a rebuild — a restart will not pick it up. When
+   redeploying to apply it, untick **"Use existing Build Cache"**, or Vercel may
+   reuse the bundle that was built without it.
+
+   If this is missing, the client calls its own origin instead of the API. The
+   symptom is `JSON.parse: unexpected character at line 1 column 1` — the app
+   is parsing its own `index.html`. The SPA rewrite in `vercel.json` is written
+   as `/:path((?!api/|health$).*)` precisely so `/api/*` returns a clean 404
+   rather than silently serving HTML with a 200. (`vercel.json` sets
+   `additionalProperties: false`, so it cannot carry comments explaining this —
+   hence the note here.)
+
+   To confirm the value actually reached the bundle:
+
+   ```bash
+   APP=https://your-project.vercel.app
+   A=$(curl -s $APP/ | grep -o '/assets/[^"]*\.js' | head -1)
+   curl -s "$APP$A" | grep -c 'sqlm-api.onrender.com'   # 0 = not set at build time
+   ```
 5. Deploy, and note the production URL, e.g.
    `https://sqlm-simulation-lab.vercel.app`.
 
@@ -99,7 +118,10 @@ The API rejects cross-origin browser calls from origins it does not know, so
 this step is required — until you do it, the deployed UI will load but every
 request will fail in the browser console.
 
-In the Render dashboard, on `sqlm-api` → **Environment**, set:
+In the Render dashboard, on `sqlm-api` → **Environment**, set the two
+variables that `render.yaml` deliberately leaves blank (`sync: false`). The
+full deployed configuration is documented in
+[`.env.production.example`](../.env.production.example):
 
 | Variable                  | Value                                                  |
 | ------------------------- | ------------------------------------------------------ |
