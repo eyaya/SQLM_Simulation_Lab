@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -20,14 +22,29 @@ app = FastAPI(
     description="FastAPI wrapper for the Williamson hybrid nanofluid SQLM solver.",
 )
 
+DEFAULT_CORS_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:4173",
+    "http://127.0.0.1:4173",
+]
+
+
+def _cors_origins() -> list[str]:
+    """Browser origins allowed to call the API cross-origin.
+
+    Only relevant when the API is reached directly; requests routed through
+    the bundled nginx proxy are same-origin and never preflight.
+    """
+    configured = os.environ.get("SQLM_CORS_ORIGINS", "").strip()
+    if not configured:
+        return DEFAULT_CORS_ORIGINS
+    return [origin.strip() for origin in configured.split(",") if origin.strip()]
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:4173",
-        "http://127.0.0.1:4173",
-    ],
+    allow_origins=_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -1,0 +1,65 @@
+# SQLM Simulation Lab
+#
+#   docker compose up --build      -> http://localhost:8080
+#
+# The browser only ever talks to the frontend container; nginx proxies
+# /api and /health through to the backend on the internal network.
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        # Keep figures written into ./ep_results owned by the host user.
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    image: sqlm-backend:latest
+    restart: unless-stopped
+    environment:
+      # Studies are CPU-bound; raise for more concurrent users, lower for
+      # a smaller memory footprint (each worker loads numpy/scipy/mpl).
+      UVICORN_WORKERS: ${UVICORN_WORKERS:-2}
+      SQLM_OUTPUT_DIR: /app/ep_results
+      # Comma-separated. Only needed for browsers hitting :8000 directly;
+      # traffic through the nginx proxy is same-origin.
+      SQLM_CORS_ORIGINS: ${SQLM_CORS_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080,http://localhost:5173,http://127.0.0.1:5173}
+      # Small dense systems: one BLAS thread per worker beats oversubscription.
+      OMP_NUM_THREADS: ${OMP_NUM_THREADS:-1}
+      OPENBLAS_NUM_THREADS: ${OPENBLAS_NUM_THREADS:-1}
+      MKL_NUM_THREADS: ${MKL_NUM_THREADS:-1}
+    volumes:
+      # Exported study figures land on the host.
+      - ./ep_results:/app/ep_results
+    expose:
+      - "8000"
+    # Uncomment to reach the API directly (Swagger UI at /docs).
+    # ports:
+    #   - "127.0.0.1:8000:8000"
+    networks:
+      - sqlm
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Empty = same-origin requests, proxied by nginx below.
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
+    image: sqlm-frontend:latest
+    restart: unless-stopped
+    environment:
+      BACKEND_ORIGIN: http://backend:8000
+      NGINX_PORT: 80
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    depends_on:
+      backend:
+        # nginx resolves "backend" once at startup, so wait for it to be up.
+        condition: service_healthy
+    networks:
+      - sqlm
+
+networks:
+  sqlm:
+    driver: bridge

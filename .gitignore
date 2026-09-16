@@ -1,0 +1,25 @@
+# Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+dist/
+
+# Local configuration
+.env
+!.env.example
+
+# Agent scratch
+.kilo/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp

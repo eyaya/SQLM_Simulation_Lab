@@ -1,6 +1,8 @@
-fastapi
-uvicorn[standard]
-numpy
-scipy
-pydantic
-matplotlib
+# Pinned to the versions the project's venv was validated against, so a
+# Docker build a year from now produces the same solver behaviour.
+fastapi==0.136.0
+uvicorn[standard]==0.44.0
+numpy==2.4.0
+scipy==1.16.3
+pydantic==2.13.2
+matplotlib==3.10.8

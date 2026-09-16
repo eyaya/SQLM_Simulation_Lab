@@ -1,0 +1,34 @@
+# Version control
+.git
+.gitignore
+.kilo
+
+# Python virtualenv (424 MB - never belongs in a build context)
+venv
+.venv
+**/__pycache__
+**/*.py[cod]
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# Node
+**/node_modules
+frontend/dist
+
+# Generated figures (mounted as a volume at runtime)
+ep_results
+
+# Docker / docs
+Dockerfile
+**/Dockerfile
+docker-compose*.yml
+.dockerignore
+.env
+README.md
+
+# Editor / OS
+.vscode
+.idea
+.DS_Store
+*.swp

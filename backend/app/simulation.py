@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import io
 import math
+import os
 import re
 import time
 import unicodedata
@@ -34,8 +35,9 @@ from .solver import SQLMSolver
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-OUTPUT_DIR = PROJECT_ROOT / "ep_results"
-OUTPUT_DIR.mkdir(exist_ok=True)
+# Overridable so the container can point this at a mounted volume.
+OUTPUT_DIR = Path(os.environ.get("SQLM_OUTPUT_DIR") or PROJECT_ROOT / "ep_results")
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 PAIR_SURFACE_COLORS = {
     "MoS2/EG": "#2563eb",
