@@ -1,0 +1,98 @@
+:root {
+  --page-gradient-start: #f8fbff;
+  --page-gradient-end: #eef4fb;
+  --surface-primary: #ffffff;
+  --surface-secondary: #f8fbff;
+  --surface-tertiary: #fbfdff;
+  --border-primary: #d7deea;
+  --border-secondary: #dbe4f0;
+  --border-strong: #cbd5e1;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --accent: #4f46e5;
+  --accent-strong: #2563eb;
+  --accent-soft: #e0e7ff;
+  --accent-border: #818cf8;
+  --accent-text: #312e81;
+  --button-text: #ffffff;
+  --error-bg: #fef2f2;
+  --error-border: #fecaca;
+  --error-text: #b91c1c;
+  --shadow-color: rgba(15, 23, 42, 0.06);
+  --input-bg: #ffffff;
+  --table-header-bg: #f8fbff;
+  --meta-pill-bg: #eef2ff;
+  --meta-pill-muted-bg: #f1f5f9;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--text-primary);
+  background: var(--page-gradient-end);
+  color-scheme: light;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+:root[data-theme='dark'] {
+  --page-gradient-start: #020617;
+  --page-gradient-end: #0f172a;
+  --surface-primary: #111827;
+  --surface-secondary: #0f172a;
+  --surface-tertiary: #172033;
+  --border-primary: #243146;
+  --border-secondary: #334155;
+  --border-strong: #475569;
+  --text-primary: #e2e8f0;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --accent: #818cf8;
+  --accent-strong: #3b82f6;
+  --accent-soft: rgba(79, 70, 229, 0.18);
+  --accent-border: #6366f1;
+  --accent-text: #e0e7ff;
+  --button-text: #ffffff;
+  --error-bg: rgba(127, 29, 29, 0.32);
+  --error-border: rgba(248, 113, 113, 0.35);
+  --error-text: #fecaca;
+  --shadow-color: rgba(2, 6, 23, 0.45);
+  --input-bg: #0f172a;
+  --table-header-bg: #111827;
+  --meta-pill-bg: rgba(99, 102, 241, 0.2);
+  --meta-pill-muted-bg: rgba(51, 65, 85, 0.65);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  color: var(--text-primary);
+  background: linear-gradient(180deg, var(--page-gradient-start) 0%, var(--page-gradient-end) 100%);
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+#root {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
